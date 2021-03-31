@@ -1,29 +1,14 @@
-"""
-
-Path planning Sample Code with Randomized Rapidly-Exploring Random Trees (RRT)
-
-author: AtsushiSakai(@Atsushi_twi)
-
-"""
-
 import math
 import random
-
 import matplotlib.pyplot as plt
 import numpy as np
 
-show_animation = True
+verbose = True
 
 
 class RRT:
-    """
-    Class for RRT planning
-    """
 
     class Node:
-        """
-        RRT Node
-        """
 
         def __init__(self, x, y):
             self.x = x
@@ -41,15 +26,7 @@ class RRT:
                  path_resolution=0.5,
                  goal_sample_rate=5,
                  max_iter=500):
-        """
-        Setting Parameter
 
-        start:Start Position [x,y]
-        goal:Goal Position [x,y]
-        obstacleList:obstacle Positions [[x,y,size],...]
-        randArea:Random Sampling Area [min,max]
-
-        """
         self.start = self.Node(start[0], start[1])
         self.end = self.Node(goal[0], goal[1])
         self.min_rand = rand_area[0]
@@ -62,14 +39,11 @@ class RRT:
         self.node_list = []
 
     def planning(self, animation=True):
-        """
-        rrt path planning
 
-        animation: flag for animation on or off
-        """
 
         self.node_list = [self.start]
         for i in range(self.max_iter):
+            print(i)
             rnd_node = self.get_random_node()
             nearest_ind = self.get_nearest_node_index(self.node_list, rnd_node)
             nearest_node = self.node_list[nearest_ind]
@@ -92,7 +66,7 @@ class RRT:
             if animation and i % 5:
                 self.draw_graph(rnd_node)
 
-        return None  # cannot find path
+        return None
 
     def steer(self, from_node, to_node, extend_length=float("inf")):
 
@@ -150,7 +124,6 @@ class RRT:
 
     def draw_graph(self, rnd=None):
         plt.clf()
-        # for stopping simulation with the esc key.
         plt.gcf().canvas.mpl_connect(
             'key_release_event',
             lambda event: [exit(0) if event.key == 'escape' else None])
@@ -171,7 +144,7 @@ class RRT:
         plt.pause(0.01)
 
     @staticmethod
-    def plot_circle(x, y, size, color="-b"):  # pragma: no cover
+    def plot_circle(x, y, size, color="-b"):
         deg = list(range(0, 360, 5))
         deg.append(0)
         xl = [x + size * math.cos(np.deg2rad(d)) for d in deg]
@@ -211,32 +184,44 @@ class RRT:
         return d, theta
 
 
-def main(gx=6.0, gy=10.0):
-    print("start " + __file__)
+def main():
+    gx=6.0
+    gy=10.0
 
-    # ====Search Path with RRT====
-    obstacleList = [(5, 5, 1), (3, 6, 2), (3, 8, 2), (3, 10, 2), (7, 5, 2),
-                    (9, 5, 2), (8, 10, 1)]  # [x, y, radius]
-    # Set Initial parameters
+    obstacleList = [
+        (5, 5, 1),
+        (3, 6, 2),
+        (3, 8, 2),
+        (3, 10, 2),
+        (7, 5, 2),
+        (9, 5, 2),
+        (8, 10, 1),
+        (6, 12, 1),
+        (2, 10, 1),
+        (8, 12, 1),
+    ]
+
     rrt = RRT(
         start=[0, 0],
         goal=[gx, gy],
         rand_area=[-2, 15],
         obstacle_list=obstacleList)
-    path = rrt.planning(animation=show_animation)
+    path = rrt.planning(animation=verbose)
 
     if path is None:
-        print("Cannot find path")
+        print("No path found")
     else:
-        print("found path!!")
-
-        # Draw final path
-        if show_animation:
+        
+        if verbose:
             rrt.draw_graph()
             plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
             plt.grid(True)
-            plt.pause(0.01)  # Need for Mac
-            plt.show()
+            plt.pause(0.01) 
+            plt.title('RRT')
+            plt.scatter(0, 0, label='start')
+            plt.scatter(gx, gy, label='goal')
+            plt.legend()
+            plt.savefig('rrt.png')
 
 
 if __name__ == '__main__':

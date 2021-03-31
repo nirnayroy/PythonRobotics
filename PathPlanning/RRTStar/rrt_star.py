@@ -1,15 +1,6 @@
-"""
-
-Path planning Sample Code with RRT*
-
-author: Atsushi Sakai(@Atsushi_twi)
-
-"""
-
 import math
 import os
 import sys
-
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../RRT/")
@@ -19,14 +10,10 @@ try:
 except ImportError:
     raise
 
-show_animation = True
+verbose = True
 
 
 class RRTStar(RRT):
-    """
-    Class for RRT Star planning
-    """
-
     class Node(RRT.Node):
         def __init__(self, x, y):
             super().__init__(x, y)
@@ -43,15 +30,6 @@ class RRTStar(RRT):
                  max_iter=300,
                  connect_circle_dist=50.0,
                  search_until_max_iter=False):
-        """
-        Setting Parameter
-
-        start:Start Position [x,y]
-        goal:Goal Position [x,y]
-        obstacleList:obstacle Positions [[x,y,size],...]
-        randArea:Random Sampling Area [min,max]
-
-        """
         super().__init__(start, goal, obstacle_list, rand_area, expand_dis,
                          path_resolution, goal_sample_rate, max_iter)
         self.connect_circle_dist = connect_circle_dist
@@ -59,12 +37,6 @@ class RRTStar(RRT):
         self.search_until_max_iter = search_until_max_iter
 
     def planning(self, animation=True):
-        """
-        rrt star path planning
-
-        animation: flag for animation on or off .
-        """
-
         self.node_list = [self.start]
         for i in range(self.max_iter):
             print("Iter:", i, ", number of nodes:", len(self.node_list))
@@ -105,25 +77,8 @@ class RRTStar(RRT):
         return None
 
     def choose_parent(self, new_node, near_inds):
-        """
-        Computes the cheapest point to new_node contained in the list
-        near_inds and set such a node as the parent of new_node.
-            Arguments:
-            --------
-                new_node, Node
-                    randomly generated node with a path from its neared point
-                    There are not coalitions between this node and th tree.
-                near_inds: list
-                    Indices of indices of the nodes what are near to new_node
-
-            Returns.
-            ------
-                Node, a copy of new_node
-        """
         if not near_inds:
             return None
-
-        # search nearest cost in near_inds
         costs = []
         for i in near_inds:
             near_node = self.node_list[i]
@@ -131,7 +86,7 @@ class RRTStar(RRT):
             if t_node and self.check_collision(t_node, self.obstacle_list):
                 costs.append(self.calc_new_cost(near_node, new_node))
             else:
-                costs.append(float("inf"))  # the cost of collision node
+                costs.append(float("inf"))
         min_cost = min(costs)
 
         if min_cost == float("inf"):
@@ -153,41 +108,27 @@ class RRTStar(RRT):
             if i <= self.expand_dis
         ]
 
-        safe_goal_inds = []
+        safe_g_inds = []
         for goal_ind in goal_inds:
             t_node = self.steer(self.node_list[goal_ind], self.goal_node)
             if self.check_collision(t_node, self.obstacle_list):
-                safe_goal_inds.append(goal_ind)
+                safe_g_inds.append(goal_ind)
 
-        if not safe_goal_inds:
+        if not safe_g_inds:
             return None
 
-        min_cost = min([self.node_list[i].cost for i in safe_goal_inds])
-        for i in safe_goal_inds:
+        min_cost = min([self.node_list[i].cost for i in safe_g_inds])
+        for i in safe_g_inds:
             if self.node_list[i].cost == min_cost:
                 return i
 
         return None
 
     def find_near_nodes(self, new_node):
-        """
-        1) defines a ball centered on new_node
-        2) Returns all nodes of the three that are inside this ball
-            Arguments:
-            ---------
-                new_node: Node
-                    new randomly generated node, without collisions between
-                    its nearest node
-            Returns:
-            -------
-                list
-                    List with the indices of the nodes inside the ball of
-                    radius r
-        """
-        nnode = len(self.node_list) + 1
-        r = self.connect_circle_dist * math.sqrt((math.log(nnode) / nnode))
-        # if expand_dist exists, search vertices in a range no more than
-        # expand_dist
+
+        nnodes = len(self.node_list) + 1
+        r = self.connect_circle_dist * math.sqrt((math.log(nnodes) / nnodes))
+
         if hasattr(self, 'expand_dis'):
             r = min(r, self.expand_dis)
         dist_list = [(node.x - new_node.x)**2 + (node.y - new_node.y)**2
@@ -196,22 +137,7 @@ class RRTStar(RRT):
         return near_inds
 
     def rewire(self, new_node, near_inds):
-        """
-            For each node in near_inds, this will check if it is cheaper to
-            arrive to them from new_node.
-            In such a case, this will re-assign the parent of the nodes in
-            near_inds to new_node.
-            Parameters:
-            ----------
-                new_node, Node
-                    Node randomly added which can be joined to the tree
 
-                near_inds, list of uints
-                    A list of indices of the self.new_node which contains
-                    nodes within a circle of a given radius.
-            Remark: parent is designated in choose_parent.
-
-        """
         for i in near_inds:
             near_node = self.node_list[i]
             edge_node = self.steer(new_node, near_node)
@@ -244,9 +170,6 @@ class RRTStar(RRT):
 
 
 def main():
-    print("Start " + __file__)
-
-    # ====Search Path with RRT====
     obstacle_list = [
         (5, 5, 1),
         (3, 6, 2),
@@ -256,28 +179,31 @@ def main():
         (9, 5, 2),
         (8, 10, 1),
         (6, 12, 1),
-    ]  # [x,y,size(radius)]
+        (2, 10, 1),
+        (8, 12, 1),
+    ] 
 
-    # Set Initial parameters
     rrt_star = RRTStar(
         start=[0, 0],
         goal=[6, 10],
         rand_area=[-2, 15],
         obstacle_list=obstacle_list,
         expand_dis=1)
-    path = rrt_star.planning(animation=show_animation)
+    path = rrt_star.planning(animation=verbose)
 
     if path is None:
-        print("Cannot find path")
+        print("No path found")
     else:
-        print("found path!!")
 
-        # Draw final path
-        if show_animation:
+        if verbose:
             rrt_star.draw_graph()
             plt.plot([x for (x, y) in path], [y for (x, y) in path], 'r--')
             plt.grid(True)
-    plt.show()
+    plt.title('RRT*')
+    plt.scatter(0, 0, label='start')
+    plt.scatter(6, 10, label='goal')
+    plt.legend()
+    plt.savefig('rrtstar.png')
 
 
 if __name__ == '__main__':
